@@ -54,10 +54,10 @@ def spec_3d(x, Fe):
     pl.show()
 
 def hanning_w(M, n):
-    if n < -M/2.0 or n > M/2.0:
+    if n < 0 or n >= M:
         return 0
     else:
-        return (1/2)*(1 + cos(2*pi*n/M))
+        return (1/2)*(1 + cos(2*pi*(n-M//2)/M))
 
 
 
@@ -145,14 +145,14 @@ def stft(x, fs, frame, hop):
     framesamp = int(frame*fs)
     hopsamp = int(hop*fs)
     w = scipy.hanning(framesamp)
-    X = scipy.array([ff.fft(w*x[i:i+framesamp]) for i in range(len(x)-framesamp, hopsamp)])
+    X = scipy.array([ff.fft(w*x[i:i+framesamp]) for i in range(0,len(x)-framesamp, hopsamp)])
     return X
 
 def istft(X, fs, T, hop):
     x = scipy.zeros(T*fs)
     framesamp = X.shape[1]
     hopsamp = int(hop*fs)
-    for n,i in enumerate(range(len(x)-framesamp, hopsamp)):
+    for n,i in enumerate(range(0,len(x)-framesamp, hopsamp)):
         x[i:i+framsamp] += scipy.real(scipy.ifft[X[n]])
     return x
 
@@ -162,11 +162,16 @@ def istft(X, fs, T, hop):
 
 I_X, F_E = get_wav("Enr_3.wav")
 NB = len(I_X)
-Xplot = np.linspace(0, NB, NB)
-Yplot = [hanning_w(500000, i - (NB//2)) for i in range(NB)]
-pl.plot(Xplot, Yplot)
+Xplot = [i for i in range(NB)]
+Yplot = [1 for i in range(NB)]
+Zplot = [0 for i in range(NB)]
+FRAME = 10000
+HOP = FRAME//2
+for i in range(0,NB - FRAME, HOP):
+    for j in range(FRAME):
+        Zplot[i + j] += hanning_w(FRAME, j)
+pl.plot(Xplot, Zplot)
 pl.show()
-print(NB)
 #spec_3d(I_X[10000:11000], F_E)
 #I_Y = cut(I_X, 0, 0.5)
 #spec(I_X, F_E)
