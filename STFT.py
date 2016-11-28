@@ -7,6 +7,10 @@ import wave
 from cmath import *
 from pylab import *
 from mpl_toolkits.mplot3d import Axes3D
+import pickle
+import scipy, pylab
+
+
 
 
 def dft(x, k, s):
@@ -22,10 +26,11 @@ def FT(x):
 def IFT(X):
     return [((1/len(X))*dft(X, n, 1)).real for n in range(len(X))]
 
-def spec(x, Fe):
+def spec(x, Fe, Fmax=100000):
     X = ff.fft(x)
-    abX = [sqrt(abs(X[k])) for k in range(len(X))]
-    tab = np.linspace(0, 2*Fe, len(X))
+    M = min(len(X)//2, Fmax)
+    abX = [sqrt(abs(X[k])) for k in range(M)]
+    tab = np.linspace(0, M , M)
     pl.grid(True)
     pl.plot(tab, abX)
     pl.show()
@@ -53,15 +58,36 @@ def hanning_w(M, n):
         return 0
     else:
         return (1/2)*(1 + cos(2*pi*n/M))
-    
-    
+
+
+
+
 def passe_bas(x, f_c, Fe):
-    y = []
     X = ff.fft(x)
-    for p in range(len(x)):
+    for p in range(int(len(X)/2)):
         X[p] = X[p]/(1 + complex(0,p*Fe/f_c))
+        X[len(X)-p-1] = X[p]
     y = ff.ifft(X)
     return y
+
+def passe_haut(x, f_c, Fe):
+    X = ff.fft(x)
+    for p in range(int(len(X)/2)):
+        X[p] = X[p]*complex(0, p*Fe/fc)/(1+complex(0, p*Fe/f_c))
+        X[len(X)-p-1] = X[p]
+    y = ff.ifft(X)
+    return y
+
+
+def keep_reco(x, Spectre, alpha):
+    X = ff.fft(x)
+    ecart = 0
+    for k in range(len(X)):
+        ecart = abs(X[k])-Spectre[k]
+        X[k] = X[k] *(1 - alpha*ecart[k])
+    y = ff.ifft(X)
+    return y
+
 
 
 def cut(x, f1, f2):
@@ -115,15 +141,33 @@ def set_wav(file_name, data, Fe):
     fichier.close()
 
 
+def stft(x, fs, frame, hop):
+    framesamp = int(frame*fs)
+    hopsamp = int(hop*fs)
+    w = scipy.hanning(framesamp)
+    X = scipy.array([ff.fft(w*x[i:i+framesamp]) for i in range(len(x)-framesamp, hopsamp)])
+    return X
+
+def istft(X, fs, T, hop):
+    x = scipy.zeros(T*fs)
+    framesamp = X.shape[1]
+    hopsamp = int(hop*fs)
+    for n,i in enumerate(range(len(x)-framesamp, hopsamp)):
+        x[i:i+framsamp] += scipy.real(scipy.ifft[X[n]])
+    return x
 
 
 
 
-#I_X, F_E = get_wav("Enr_3.wav")
+
+I_X, F_E = get_wav("Enr_3.wav")
+NB = len(I_X)
+Xplot = np.linspace(0, NB, NB)
+Yplot = [hanning_w(500000, i - (NB//2)) for i in range(NB)]
+pl.plot(Xplot, Yplot)
+pl.show()
+print(NB)
 #spec_3d(I_X[10000:11000], F_E)
 #I_Y = cut(I_X, 0, 0.5)
-#spec(I_Y[10000:11000], F_E)
+#spec(I_X, F_E)
 #set_wav("Res_3.wav", I_Y, F_E)
-
-
-
