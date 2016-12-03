@@ -9,6 +9,10 @@ from pylab import *
 from mpl_toolkits.mplot3d import Axes3D
 import pickle
 import scipy, pylab
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+from matplotlib.colors import BoundaryNorm
+from matplotlib.ticker import MaxNLocator
+import sys, os
 
 
 
@@ -141,6 +145,8 @@ def set_wav(file_name, data, Fe):
     fichier.close()
 
 
+
+
 def stft(x, fs, frame, hop):
     framesamp = int(frame*fs)
     hopsamp = int(hop*fs)
@@ -157,7 +163,35 @@ def istft(X, fs, T, hop):
     return x
 
 
-
+def spectrogramme(Y_stft):
+        div = 50
+        x = np.linspace(0, len(Y_stft), len(Y_stft))
+        y = np.linspace(2, len(Y_stft[0])//div, len(Y_stft[0])//div-2)
+        z = []
+        m = pow(10,5)
+        M = 0
+        for j in range(2, len(Y_stft[0])//div):
+            l=[]
+            for i in range(len(Y_stft)):
+                a = abs(sqrt(Y_stft[i][j]))
+                if a < m:
+                    m = a
+                if a > M:
+                    M = a
+                l += [a]
+            z += [l]
+        levels1 = MaxNLocator(nbins = 15).tick_values(m, M*0.7)
+        cmap1 = pl.get_cmap('PiYG')
+        norm1 = BoundaryNorm(levels1, ncolors = cmap1.N, clip = True)
+        fig, ax1 = pl.subplots(nrows = 1)
+        """im = ax0.pcolormesh(x, y, z, cmap = cmap1, norm = norm1)
+        fig.colorbar(im, ax = ax0)
+        ax0.set_title('STFT1')"""
+        cf = ax1.contourf(x, y, z, levels = levels1, cmap = cmap1)
+        fig.colorbar(cf, ax = ax1)
+        ax1.set_title('STFT2')
+        fig.tight_layout()
+        pl.show()
 
 
 I_X, F_E = get_wav("Enr_3.wav")
@@ -165,13 +199,21 @@ NB = len(I_X)
 Xplot = [i for i in range(NB)]
 Yplot = [1 for i in range(NB)]
 Zplot = [0 for i in range(NB)]
-FRAME = 10000
+FRAME = 1000
 HOP = FRAME//2
+FS = 1
+I_Y = stft(I_X, FS, FRAME, HOP)
+#print(abs(I_Y[0][1]))
+spectrogramme(I_Y)
+#I_Z = istft(I_Y, FS, 1, HOP)
+
+"""
 for i in range(0,NB - FRAME, HOP):
     for j in range(FRAME):
         Zplot[i + j] += hanning_w(FRAME, j)
 pl.plot(Xplot, Zplot)
 pl.show()
+"""
 #spec_3d(I_X[10000:11000], F_E)
 #I_Y = cut(I_X, 0, 0.5)
 #spec(I_X, F_E)
