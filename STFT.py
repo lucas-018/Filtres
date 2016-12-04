@@ -146,6 +146,62 @@ def set_wav(file_name, data, Fe):
 
 
 
+def put_signal(x_import):
+    x_s = []
+    for i in range(len(x_import)):
+        if x_import[i]>127.5:
+            x_s += [x_import[i]-256]
+        else:
+            x_s += [x_import[i]]
+    return x_s
+
+def put_swav(signal):
+    x_w = []
+    for i in range(len(signal)):
+        if signal[i] < 0:
+            x_w += [min(256+signal[i],255)]
+        else:
+            x_w += [signal[i]]
+    return x_w
+
+
+def mediane(tab):
+    tableau = tab
+    tableau.sort()
+    if len(tableau)%2 == 0:
+        return (tableau[(len(tableau)//2)-1]+tableau[len(tableau)//2])/2.0
+    else:
+        return tableau[len(tableau)//2]
+
+def filtre_median(x, width):
+    y = []
+    for i in range(width):
+        y += [x[i]]
+    for i in range(width,len(x)-width):
+        y += [mediane(x[i-width:i+width+1])]
+    for i in range(len(x)-width, len(x)):
+        y += [x[i]]
+    return y
+
+
+def moyenne(tab):
+    moy = 0
+    for i in range(len(tab)):
+        moy += tab[i]
+    moy = moy/len(tab)
+    return moy
+
+def filtre_moyen(x, width):
+    y = []
+    for i in range(width):
+        y += [x[i]]
+    for i in range(width, len(x)-width):
+        y += [moyenne(x[i-width:i+width+1])]
+    for i in range(len(x)-width, len(x)):
+        y += [x[i]]
+    return y
+
+
 
 def stft(x, fs, frame, hop):
     framesamp = int(frame*fs)
@@ -155,24 +211,27 @@ def stft(x, fs, frame, hop):
     return X
 
 def istft(X, fs, T, hop):
-    x = scipy.zeros(T*fs)
+    x = scipy.zeros(len(X))
     framesamp = X.shape[1]
     hopsamp = int(hop*fs)
     for n,i in enumerate(range(0,len(x)-framesamp, hopsamp)):
-        x[i:i+framsamp] += scipy.real(scipy.ifft[X[n]])
+        x[i:i+framesamp] += scipy.real(ff.ifft(X[n]))
     return x
 
 
 def spectrogramme(Y_stft):
-        div = 50
-        x = np.linspace(0, len(Y_stft), len(Y_stft))
-        y = np.linspace(2, len(Y_stft[0])//div, len(Y_stft[0])//div-2)
+        div = 24
+        deb = 0
+        start  = 200
+        divtps = 11
+        x = np.linspace(start, len(Y_stft)//divtps, len(Y_stft)//divtps-start)
+        y = np.linspace(deb, len(Y_stft[0])//div, len(Y_stft[0])//div-deb)
         z = []
         m = pow(10,5)
         M = 0
-        for j in range(2, len(Y_stft[0])//div):
+        for j in range(deb, len(Y_stft[0])//div):
             l=[]
-            for i in range(len(Y_stft)):
+            for i in range(start, len(Y_stft)//divtps):
                 a = abs(sqrt(Y_stft[i][j]))
                 if a < m:
                     m = a
@@ -180,7 +239,7 @@ def spectrogramme(Y_stft):
                     M = a
                 l += [a]
             z += [l]
-        levels1 = MaxNLocator(nbins = 15).tick_values(m, M*0.7)
+        levels1 = MaxNLocator(nbins = 30).tick_values(m, M)
         cmap1 = pl.get_cmap('PiYG')
         norm1 = BoundaryNorm(levels1, ncolors = cmap1.N, clip = True)
         fig, ax1 = pl.subplots(nrows = 1)
@@ -193,6 +252,34 @@ def spectrogramme(Y_stft):
         fig.tight_layout()
         pl.show()
 
+def Var(x):
+    V = 0
+    E = moyenne(x)
+    for i in range(len(x)):
+        V += pow(x[i]-E, 2)
+    V = V/len(x)
+    return V
+
+def filtre_ecart(x, fs, frame, hop, alpha):
+    sigma = sqrt(Var(x))
+    print(sigma)
+    print(moyenne(x))
+    X = stft(x, fs, frame, hop)
+    for i in range(len(X)):
+        for j in range(len(X[i])):
+            X[i][j] = min(abs(X[i][j]), alpha*sigma)*rect(1,phase(X[i][j]))
+    y = istft(X, fs, 128, hop)
+    return y
+
+"""
+test = []
+for i in range(200000):
+    val_int = (100*sin(i/30))
+    if val_int >= 0:
+        test += [val_int]
+    else:
+        test += [255+val_int]
+"""
 
 I_X, F_E = get_wav("Enr_3.wav")
 NB = len(I_X)
@@ -202,11 +289,15 @@ Zplot = [0 for i in range(NB)]
 FRAME = 1000
 HOP = FRAME//2
 FS = 1
-I_Y = stft(I_X, FS, FRAME, HOP)
-#print(abs(I_Y[0][1]))
-spectrogramme(I_Y)
+#S1 = put_signal(I_X)
+#I_Y = stft(I_X, FS, FRAME, HOP)
+#spectrogramme(I_Y)
+Y_res = istft(stft(I_X, FS, FRAME, HOP), FS, FRAME, HOP)
+#Y_med = filtre_median(S1, 2)
 #I_Z = istft(I_Y, FS, 1, HOP)
+#print(len(I_X))
 
+#X_W = put_swav(Y_med)
 """
 for i in range(0,NB - FRAME, HOP):
     for j in range(FRAME):
@@ -217,4 +308,5 @@ pl.show()
 #spec_3d(I_X[10000:11000], F_E)
 #I_Y = cut(I_X, 0, 0.5)
 #spec(I_X, F_E)
-#set_wav("Res_3.wav", I_Y, F_E)
+set_wav("Res_3.wav", Y_res, F_E)
+#set_wav("test.wav", test, F_E)
