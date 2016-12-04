@@ -210,8 +210,8 @@ def stft(x, fs, frame, hop):
     X = scipy.array([ff.fft(w*x[i:i+framesamp]) for i in range(0,len(x)-framesamp, hopsamp)])
     return X
 
-def istft(X, fs, T, hop):
-    x = scipy.zeros(len(X))
+def istft(X, fs, npts, hop):
+    x = scipy.zeros(npts)
     framesamp = X.shape[1]
     hopsamp = int(hop*fs)
     for n,i in enumerate(range(0,len(x)-framesamp, hopsamp)):
@@ -262,13 +262,16 @@ def Var(x):
 
 def filtre_ecart(x, fs, frame, hop, alpha):
     sigma = sqrt(Var(x))
+    npts = len(x)
     print(sigma)
     print(moyenne(x))
     X = stft(x, fs, frame, hop)
+
     for i in range(len(X)):
         for j in range(len(X[i])):
             X[i][j] = min(abs(X[i][j]), alpha*sigma)*rect(1,phase(X[i][j]))
-    y = istft(X, fs, 128, hop)
+    y = istft(X, fs, npts, hop)
+    print(len(y))
     return y
 
 """
@@ -289,12 +292,13 @@ Zplot = [0 for i in range(NB)]
 FRAME = 1000
 HOP = FRAME//2
 FS = 1
-#S1 = put_signal(I_X)
+
+S1 = put_signal(I_X)
 #I_Y = stft(I_X, FS, FRAME, HOP)
 #spectrogramme(I_Y)
-Y_res = istft(stft(I_X, FS, FRAME, HOP), FS, FRAME, HOP)
+Y_res = put_swav((filtre_ecart(S1, FS, FRAME, HOP, 4)))
 #Y_med = filtre_median(S1, 2)
-#I_Z = istft(I_Y, FS, 1, HOP)
+#I_Z = istft(I_Y, FS, NB, HOP)
 #print(len(I_X))
 
 #X_W = put_swav(Y_med)
