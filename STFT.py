@@ -2,6 +2,8 @@ import numpy as np
 from scipy.signal import get_window
 from scipy import fftpack as ff
 from math import *
+from scipy.io.wavfile import read
+from scipy.io.wavfile import write
 import matplotlib.pyplot as pl
 import wave
 from cmath import *
@@ -183,6 +185,15 @@ def filtre_median(x, width):
         y += [x[i]]
     return y
 
+def puts(x):
+    s = [x[i][0] for i in range(len(x))]
+    return s
+
+def reputs(s):
+    x = [[s[i], s[i]] for i in range(len(s))]
+    y = np.asarray(x, dtype=np.int16)
+    return y
+
 
 def moyenne(tab):
     moy = 0
@@ -221,10 +232,10 @@ def istft(X, fs, npts, hop):
 
 
 def spectrogramme(Y_stft):
-        div = 24
+        div = 50
         deb = 0
         start  = 200
-        divtps = 11
+        divtps = 1
         x = np.linspace(start, len(Y_stft)//divtps, len(Y_stft)//divtps-start)
         y = np.linspace(deb, len(Y_stft[0])//div, len(Y_stft[0])//div-deb)
         z = []
@@ -233,14 +244,14 @@ def spectrogramme(Y_stft):
         for j in range(deb, len(Y_stft[0])//div):
             l=[]
             for i in range(start, len(Y_stft)//divtps):
-                a = abs(Y_stft[i][j])
+                a = (abs(Y_stft[i][j]))
                 if a < m:
                     m = a
                 if a > M:
                     M = a
                 l += [a]
             z += [l]
-        levels1 = MaxNLocator(nbins = 30).tick_values(m, M)
+        levels1 = MaxNLocator(nbins = 15).tick_values(m, M)
         cmap1 = pl.get_cmap('PiYG')
         norm1 = BoundaryNorm(levels1, ncolors = cmap1.N, clip = True)
         fig, ax1 = pl.subplots(nrows = 1)
@@ -277,6 +288,10 @@ def filtre_ecart(x, fs, frame, hop, alpha):
     print(len(y))
     return y
 
+def plot_signal(x):
+    t = [i for i in range(len(x))]
+    pl.plot(t, x)
+
 """
 test = []
 for i in range(200000):
@@ -285,7 +300,7 @@ for i in range(200000):
         test += [val_int]
     else:
         test += [255+val_int]
-"""
+
 
 I_X, F_E = get_wav("Enr_9.wav")
 NB = len(I_X)
@@ -307,7 +322,6 @@ spec(Y1, F_E)
 #print(len(I_X))
 
 #X_W = put_swav(Y_med)
-"""
 for i in range(0,NB - FRAME, HOP):
     for j in range(FRAME):
         Zplot[i + j] += hanning_w(FRAME, j)
