@@ -18,7 +18,6 @@ import sys, os
 
 
 
-
 def dft(x, k, s):
     N = len(x)
     res = 0
@@ -67,19 +66,18 @@ def hanning_w(M, n):
 
 
 
-
 def passe_bas(x, f_c, alpha, Fe):
     X = ff.fft(x)
     for p in range(int(len(X)/2)):
-        X[p] = X[p]/(1 + alpha*complex(0,p*Fe/(len(X)*f_c)))
+        X[p] = alpha*X[p]/(1 + complex(0,p*Fe/(len(X)/2*f_c)))
         X[len(X)-p-1] = X[p]
     y = ff.ifft(X)
     return y
 
-def passe_haut(x, f_c, alpha, Fe):
+def passe_haut(x, f_c, Fe):
     X = ff.fft(x)
     for p in range(int(len(X)/2)):
-        X[p] = X[p]*alpha*(complex(0, p*Fe/(len(X)*f_c))/(1+alpha*complex(0, p*Fe/(len(X)*f_c))))
+        X[p] = alpha*X[p]*(complex(0, p*Fe/(len(X)*f_c))/(1+complex(0, p*Fe/(len(X)/2*f_c))))
         X[len(X)-p-1] = X[p]
     y = ff.ifft(X)
     return y
@@ -231,6 +229,23 @@ def istft(X, fs, npts, hop):
     return x
 
 
+def passe_haut_stft(x, f_c, fs, frame, hop, Fe):
+    X = stft(x, fs, frame, hop)
+    for t in range(len(X)):
+        for p in range(len(X[t])):
+            X[t][p] = X[t][p]*(complex(0, p*Fe/(len(X)*f_c))/(1+complex(0, p*Fe/(len(X)*f_c))))
+    y = istft(X, fs, len(x), hop)
+    return y
+
+def passe_bas_stft(x, f_c, fs, frame, hop, Fe):
+    X = stft(x, fs, frame, hop)
+    for t in range(len(X)):
+        for p in range(len(X[t])):
+            X[t][p] = X[t][p]/(1 + complex(0,p*Fe/(len(X)*f_c)))
+    y = istft(X, fs, len(x), hop)
+    return y
+
+
 def spectrogramme(Y_stft):
         div = 50
         deb = 0
@@ -272,7 +287,7 @@ def Var(x):
     V = V/len(x)
     return V
 
-def filtre_ecart(x, fs, frame, hop, alpha):
+def cut_ecart(x, fs, frame, hop, alpha):
     sigma = sqrt(Var(x))
     npts = len(x)
     print(sigma)
@@ -288,48 +303,23 @@ def filtre_ecart(x, fs, frame, hop, alpha):
     print(len(y))
     return y
 
+def filtre_ecart(x, fs, frame, hop, alpha):
+    sigma = sqrt(Var(x))
+    npts = len(x)
+    print(sigma)
+    print(moyenne(x))
+    X = stft(x, fs, frame, hop)
+
+    for i in range(len(X)):
+        for j in range(len(X[i])):
+            #if abs(X[i][j]) > alpha*sigma:
+                #X[i][j] = 0
+            X[i][j] = min(abs(X[i][j]), alpha*sigma)*rect(1,phase(X[i][j]))
+    y = istft(X, fs, npts, hop)
+    print(len(y))
+    return y
+
+
 def plot_signal(x):
     t = [i for i in range(len(x))]
     pl.plot(t, x)
-
-"""
-test = []
-for i in range(200000):
-    val_int = (100*sin(i/30))
-    if val_int >= 0:
-        test += [val_int]
-    else:
-        test += [255+val_int]
-
-
-I_X, F_E = get_wav("Enr_9.wav")
-NB = len(I_X)
-Xplot = [i for i in range(NB)]
-Yplot = [1 for i in range(NB)]
-Zplot = [0 for i in range(NB)]
-FRAME = 1000
-HOP = FRAME//2
-FS = 1
-
-S1 = put_signal(I_X)
-spec(S1, F_E)
-Y1 = passe_haut(S1, 300, 10, F_E)
-spec(Y1, F_E)
-#I_Y = stft(I_X, FS, FRAME, HOP)
-#spectrogramme(I_Y)
-#Y_res = put_swav((filtre_ecart(S1, FS, FRAME, HOP, 50)))
-#Y_med = filtre_median(S1, 2)
-#print(len(I_X))
-
-#X_W = put_swav(Y_med)
-for i in range(0,NB - FRAME, HOP):
-    for j in range(FRAME):
-        Zplot[i + j] += hanning_w(FRAME, j)
-pl.plot(Xplot, Zplot)
-pl.show()
-"""
-#spec_3d(I_X[10000:11000], F_E)
-#I_Y = cut(I_X, 0, 0.5)
-#spec(I_X, F_E)
-#set_wav("Res_9.wav", Y_res, F_E)
-#set_wav("test.wav", test, F_E)
