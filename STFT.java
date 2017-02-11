@@ -50,6 +50,9 @@ public class STFT {
 	public void set(int n_time, int n_freq, Complex z) {
 		data[n_time*frame+n_freq] = new Complex(z.re, z.im);
 	}
+	public void set(int n_time, int n_freq, double s) {
+		data[n_time*frame+n_freq] = new Complex(s, 0);
+	}
 	public double[] istft() {
 		double tab[] = new double[init_samples];
 		for(int i=0;i<init_samples;i++) {

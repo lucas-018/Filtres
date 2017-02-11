@@ -66,6 +66,24 @@ public class Signal {
     	Signal S = new Signal(data, Fe);
     	return S;
     }
+    public double moyenne() {
+    	double moy = 0;
+    	for(int i=0;i<samples;i++) {
+    		moy += data[i];
+    	}
+    	moy = moy/samples;
+    	return moy;
+    }
+    public double variance() {
+    	double var = 0;
+    	for(int i=0;i<samples;i++) {
+    		var += data[i]*data[i];
+    	}
+    	var = var/samples;
+    	double moy = moyenne();
+    	var -= moy*moy;
+    	return var;
+    }
     public Complex[] fft(){
         Complex x[] = new Complex[size_2];
         Complex X[] = new Complex[size_2];
@@ -123,5 +141,16 @@ public class Signal {
     		}
     	}
     }
-    
+    public void cutEcart(double alpha) {
+    	double sigma = Math.sqrt(variance());
+    	STFT stft = new STFT(data, 1024, 512);
+    	for(int i=0;i<stft.num();i++) {
+    		for(int j=0;j<stft.frame();j++) {
+    			if(stft.get(i,  j).abs()>alpha*sigma) {
+    				stft.set(i,  j,  0);
+    			}
+    		}
+    	}
+    	data = stft.istft();
+    }
 }
