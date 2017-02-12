@@ -1,0 +1,66 @@
+\documentclass{report}
+
+\usepackage[latin1]{inputenc}
+\usepackage[francais]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathrsfs}
+\usepackage{lmodern}
+\usepackage[top=3cm, bottom=3cm, left=3cm, right=3cm]{geometry}
+\usepackage{graphicx}
+
+\title{Rapport Projet TDLog}
+\author{Oscar CLIVIO, Andrei KARTASHOV, Lucas BRIFAULT}
+
+\begin{document}
+\maketitle
+\chapter*{Introduction}
+\chapter*{Recherche des Filtres Audio}
+\section*{Choix du langage de programmation}
+\large
+Dans le but de développer et tester différents filtres audios le plus rappidement possible, il nous fallait choisir un langage de programmation à la fois facile à manipuler et performant d'un point de vue "exigences scientifiques". Nous nous sommes alors naturellement orientés vers Python, qui en plus avait le mérite d'être bien connu de nous trois. Ce langage script dispose de surcroit de bibliothèques très pratiques pour la lecture et l'enregistrement de fichiers son, le traitement rapide du signal et l'analyse de la qualité des filtres créés (scipy, pylab, matplotlib...).
+\section*{Les bases: le son}
+\large
+Avant de se lancer bille en tête dans la programmation d'une batterie de filtres, et comme nous l'a fortement suggéré notre encadrant, il s'gissait de bien comprendre, sinon de bien se rappeler ce qu'est le son et comment on peut l'interpréter.\\
+Le son est une fluctuation de pression (le plus souvent dans l'air, mais ce peut être un autre milieu) selon certaines fréquences, fréquences qui vont, ou non, être captées par l'oreille humaine (domaine audible: $20 Hz$ - $20000 Hz$).
+Le son peut être interprété de plusieurs façons, on a notamment:\\
+-L'interprétation temporelle (courbe de la variation de pression en fonction du temps)\\
+-L'interprétation fréquentielle (en considératn que le signal est une somme de sinusoïdes à différentes fréquences, phases et amplitudes)\\
+\\
+D'un poit de vue plutôt "instrumental", on peut caractériser un son (ex: la voix) selon différents critères:\\
+-La hauteur (la fondamentale)\\
+-Le timbre (le spectre)\\
+-L'enveloppe, qui est en quelque sorte la variation en amplitude des fluctuations, et qui correspond à la forme globale que prend la courbe temporelle du signal.\\
+\\
+On peut également considérer un signal discrétisé (échantillonné, comme c'est toujours le cas numériquement) comme la réalisation d'un nombre fini de variables aléatoires. Par exemple on peut voir le signal total comme la somme de vecteurs aléatoires correspondant à chaque source sonore. Cela est assez puissant, puisqu'il nous donne accès à des outils probabilistes comme l'indépendance, qui peut aider dans certains cas à séparer certaines sources...\\ 
+\section*{Les bases: l'analyse du signal}
+\large
+Nous présentons ici des outils et algorithmes très classiques en traitement du signal, qui nous ont guidé dans le choix des filtre (faisabilité...).\\
+\\
+Bien sûr on commence avec la transformée de Fourier et la transformée de Fourier inverse, qui permettent justement (cf ection ci-dessus) de passer de la représentation temporelle à la représentation fréquentielle du signal et réciproquement. Evidemment, on utilise ii les versions discrètes. Dans un soucis de rapidité, essentielle pour l'execution des tests, et surtout pour la performance finale des filtres, nous n'avons pas utilisé la transformée simple, mais la "Fast Fourier Transform" (FFT) qui est un algorithme qui s'inspire du principe "divide and conquer", en calculant récursivement les transformées de sous-parties du signal discret (en séparant les indices pairs et les indices impairs du tableau contenant les points du signal). Cet algorithme est bien plus efficace, même si il nécessite en général qu'on lui fournisse en entrée un tableau dont la taille est une puissance de 2.
+En ce qui concerne python, cet algorythme est déjà inclus dans la bibliothèque scipy, même si il est facilement programmable.\\
+\\ 
+Le second outil indispensable est la "Short Term Fourier Transform" (STFT), qui part du constat suivant: la transformée de Fourier ne permet qu'une vision globale de la présence de chaque fréquence sur l'ensemble deu signal. Mais un signal n'est pas homogène et évolue dans le temps, et certaines fréquences sont plus ou moins présentes selon l'instant considéré. La STFT va alors "découper" le signal selon des fenêtres à différents pas de temps, et effectuer une transformée de fourier (bien sûr on prendra aussi la FFT) sur chacun des morceaux obtenus. On dispose alors de la répartition des fréquences selon les pas de temps choisis. Il existe différents types de fenêtres qui "pondèrent" le signal d'une manière qui se veut optimale. Nous avons quant à nous choisi d'utiliser le modèle de la fenêtre de Hann, dont voici la formule:\\
+\[
+w[i]\ =\ \frac{1}{2}\left(1\ -\ cos(\frac{2i\pi}{N})\right)
+\]
+Où $N$ est la largeur choisie de la fenêtre, et $w$ est le tableau qui va pondérer la section du signal considérée (section qui est donc de largeur N, et qui démarre à un certain instant $t\ =\ k\times h$ où $h$ est le pas de temps choisi).   
+\section*{Les filtres}
+\large
+Les filtres que l'on cherche à élaborer doivent être pensés selon le contexte d'utilisation de l'application (restaurant, bar, extérieur...). Nous avons donc du lister (en en discutant notamment avec notre encadrant) un certain nombre de nuisances sonores que l'utilisateur trouverai bon d'éliminer ou de diminuer. Parmis ces nuisances on trouve: Le vent, les bruits de moteur, les bruits de couverts, les bruits parasites (crachement...), le brouhaha (ex: discussions voisines)... Au contraire on peut chercher à amplifier ou garder certaines parties du signal (musique, explication vocale de l'utilisateur...).\\
+Nous avons dû éliminer rapidement les traitements qui paraissaient trop ambitieux dans le temps qui nous était imparti. Par exemple, supprimer le brouhaha ambiant dans un restaurant en gardant la voix de l'utilisateur peut constituer a priori un véritable tour de force (on veut traiter différamment des sources qui ont les mêmes plages de fréquence, des amplitudes pas nécessairement très éloignées...). On peut cependant (ce qui a d'ailleurs été une de nos idées de filtres durant une période) procéder à une sorte de reconnaissance vocale pour réhausser la voix de l'utilisateur (dont les caractéristiques sont connues a priori) par rapport au reste du signal.\\
+\\
+Nous avons finalement décider de nous concentrer sur:\\
+\begin{itemize}
+\item Un filtre "Extérieur", à la fois anti-moteur et anti-vent, qui serait lui-même constitué:
+\begin{itemize}
+\item D'un passe-haut de fréquence de coupure $f_c \approx 400 Hz$ pour cibler les fréquences caractéristiques des moteurs de voiture et du vent "doux".
+\item D'un filtre "anti-aberration", qui supprime localement les fluctuations trop importantes par rapport au reste du signal. Ce filtre est avant tout destiner à réduire l'impact d'un vent assez "fort", qui viendrait taper sur le micro.\\
+\end{itemize}
+\item Un Filtre "Musique" destiné comme son nom l'indique à réhausser la musique par rapport au bruit ambiant. Une première idée était d'appliquer un passe-bas sur le signal de manière à conserver les basses de la musique en diminuant les fréquences correspondant aux bruits de conversation, etc...
+\end{itemize}
+\chapter*{Programmation d'un prototype d'application}
+\chapter*{Diffucultés générales}
+\chapter*{Conclusion et Perspectives}
+\end{document}
