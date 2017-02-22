@@ -1,0 +1,4 @@
+Pour recréer la dernière version de l'application Android:
+1) Décompresser .gradle.zip dans un dossier CheckItOutPrototype
+2) Y créer un dossier app
+3) Y décompresser (dans app) build.zip et libs.zip
